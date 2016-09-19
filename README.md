@@ -3,7 +3,11 @@ An Erlang IRC client.
 
 ## How to use
 Compile with rebar.
-Start by loading the ircer_app module and connect to a server.
+Start an Erlang shell and set the path to wherever you have the binaries, for example ```erl -pa /path/to/ircer/ebin/```
+Start by loading the ircer_app module and calling the start function. This will connect to a server.
+
+```l(ircer_app).
+ircer_app:start("se.quakenet.org", 6667, "MyNickName" "Real Name").```
 
 Human interface functions are in the i module, just to make them quicker to access. This means that OTP's i module will be unavailable. Call the exported function ```i:help/0``` to see the available commands.
 
