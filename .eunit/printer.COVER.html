@@ -1,0 +1,37 @@
+<html>
+<head><title>.eunit/printer.COVER.html</title></head><body bgcolor=white text=black>
+<pre>
+File generated from /home/erolars/erlangassignments/ircer/.eunit/printer.erl by COVER 2014-07-17 at 13:18:28
+
+****************************************************************************
+
+        |  -module(printer).
+        |  -export([
+        |  	 print_incoming_server_message/1,
+        |  	 print_outgoing_server_message/1,
+        |  	 print_warning_message/1,
+        |  	 print_error_message/1,
+        |  	 print_custom/1,
+        |  	 print_regular_message/1
+        |  	]).
+        |  
+        |  print_incoming_server_message(Message) -&gt;
+<font color=red>     0..|      io:format("&gt; ~s~n", [Message]).</font>
+        |  
+        |  print_outgoing_server_message(Message) -&gt;
+<font color=red>     0..|      io:format("&lt; ~s~n", [Message]).</font>
+        |  
+        |  print_warning_message(Message) -&gt;
+<font color=red>     0..|      io:format("/!\\ ~s~n", [Message]).</font>
+        |  
+        |  print_error_message(Message) -&gt;
+<font color=red>     0..|      io:format("!!! ~s~n", [Message]).</font>
+        |  
+        |  print_custom(Message) -&gt;
+<font color=red>     0..|      io:format("~s~n", [Message]). </font>
+        |  
+        |  print_regular_message(Message) -&gt;
+<font color=red>     0..|      io:format("~s~n", [Message]).</font>
+</pre>
+</body>
+</html>

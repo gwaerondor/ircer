@@ -1,0 +1,83 @@
+<html>
+<head><title>.eunit/i.COVER.html</title></head><body bgcolor=white text=black>
+<pre>
+File generated from /home/erolars/erlangassignments/ircer/.eunit/i.erl by COVER 2014-07-17 at 13:18:28
+
+****************************************************************************
+
+        |  -module(i).
+        |  -include("irc.hrl").
+        |  -export([
+        |  	 msg/2,
+        |  	 join/1,
+        |  	 quit/1,
+        |  	 quit/0,
+        |  	 part/2,
+        |  	 nick/1,
+        |  	 part/1,
+        |  	 connect/3,
+        |  	 connect/4,
+        |  	 send_ident/2
+        |  	]).
+        |  -define(log(Msg), logger:write("i.erl", Msg)).	       
+        |  
+        |  send_ident(Nickname, Realname) -&gt;
+<font color=red>     0..|      Ident = #message{type = ident,</font>
+        |  		     sender = Nickname,
+        |  		     text = Realname
+        |  		    },
+<font color=red>     0..|      socket_handler ! {message, codec:encode_message(Ident)}.</font>
+        |  
+        |  % This is where the user commands live.
+        |  msg(Target, Message) -&gt;
+<font color=red>     0..|      Outgoing = #message{type=privmsg, receiver=Target, text=Message},</font>
+<font color=red>     0..|      Outgoing_enc = codec:encode_message(Outgoing),</font>
+<font color=red>     0..|      socket_handler ! {message, Outgoing_enc}.</font>
+        |  
+        |  join(Channel) -&gt;
+<font color=red>     0..|      Outgoing = #message{type=join, channel=Channel},</font>
+<font color=red>     0..|      Outgoing_enc = codec:encode_message(Outgoing),</font>
+<font color=red>     0..|      ?log("Joining channel " ++ Channel),</font>
+<font color=red>     0..|      socket_handler ! {message, Outgoing_enc}.</font>
+        |  
+        |  nick(Nickname) -&gt;
+<font color=red>     0..|      Outgoing = #message{type = nick,</font>
+        |  		       text = Nickname
+        |  		      },
+<font color=red>     0..|      Outgoing_enc = codec:encode_message(Outgoing),</font>
+<font color=red>     0..|      ?log("Changing nickname to " ++ Nickname),</font>
+<font color=red>     0..|      socket_handler ! {message, Outgoing_enc}.</font>
+        |  
+        |  part(Channel) -&gt;
+<font color=red>     0..|      part(Channel, "").</font>
+        |  
+        |  part(Channel, Message) -&gt;
+<font color=red>     0..|      Outgoing = #message{type = part,</font>
+        |  			channel = Channel,
+        |  			text = Message},
+<font color=red>     0..|      Outgoing_enc = codec:encode_message(Outgoing),</font>
+<font color=red>     0..|      ?log("Parted channel " ++ Channel),</font>
+<font color=red>     0..|      socket_handler ! {message, Outgoing_enc}.</font>
+        |  
+        |  quit(Message) -&gt;
+        |      % How do I check if a node/process is active?
+        |      % I want to skip doing this if it is inactive!
+<font color=red>     0..|      Outgoing = #message{type = quit,</font>
+        |  			text = Message},
+<font color=red>     0..|      Outgoing_enc = codec:encode_message(Outgoing),</font>
+<font color=red>     0..|      ?log("Quitting IRCer."),</font>
+<font color=red>     0..|      socket_handler ! {message, Outgoing_enc},</font>
+<font color=red>     0..|      socket_handler ! quit.</font>
+        |  
+        |  quit() -&gt;
+<font color=red>     0..|      quit("I was using IRCer v. 874442773.01").</font>
+        |  
+        |  connect(Server, Port, Nickname, Realname) -&gt;
+<font color=red>     0..|      quit(),</font>
+<font color=red>     0..|      ircer_app:start(Server, Port, Nickname, Realname).</font>
+        |  
+        |  connect(Server, Port, Nickname) -&gt;
+<font color=red>     0..|      connect(Server, Port, Nickname, Nickname).</font>
+</pre>
+</body>
+</html>

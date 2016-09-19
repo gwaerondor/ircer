@@ -1,0 +1,50 @@
+<html>
+<head><title>.eunit/logger.COVER.html</title></head><body bgcolor=white text=black>
+<pre>
+File generated from /home/erolars/erlangassignments/ircer/.eunit/logger.erl by COVER 2014-07-17 at 13:18:28
+
+****************************************************************************
+
+        |  -module(logger).
+        |  -export([write/2,
+        |  	 generate_timestamp/0,
+        |  	 generate_date_timestamp/0,
+        |  	 generate_datestamp/0,
+        |  	 time_with_two_digits/1
+        |  	]).
+        |  
+        |  write(Module, Message) -&gt;
+     1..|      Timestamp = generate_timestamp(),
+     1..|      Message_to_write = "["++Timestamp++"] " ++ Module ++ ": " ++ Message ++ "\n",
+     1..|      file:write_file("./ircer.log", Message_to_write,[append]).
+        |  
+        |  generate_date_timestamp() -&gt;
+     1..|      Time_text = generate_timestamp(),
+     1..|      Date_text = generate_datestamp(),
+     1..|      Date_text ++ " " ++ Time_text.
+        |  
+        |  generate_datestamp() -&gt;
+     1..|      {Date, _} = calendar:local_time(),
+     1..|      {Year_now, Month_now, Day_now} = Date,
+     1..|      integer_to_list(Year_now) ++ "-" ++
+        |  	time_with_two_digits(Month_now) ++ "-" ++
+        |  	time_with_two_digits(Day_now).
+        |  
+        |  generate_timestamp() -&gt;
+     8..|      {_, Time} = calendar:local_time(),
+     8..|      {Hour_now, Minute_now, Second_now} = Time,
+     8..|      time_with_two_digits(Hour_now) ++ ":" ++
+        |  	time_with_two_digits(Minute_now) ++ ":" ++
+        |  	time_with_two_digits(Second_now).
+        |      
+        |  
+        |  time_with_two_digits(Any_time_unit) -&gt;
+    32..|      case Any_time_unit &lt; 10 of
+        |  	true -&gt;
+     2..|  	    "0" ++ integer_to_list(Any_time_unit);
+        |  	false -&gt;
+    30..|  	    integer_to_list(Any_time_unit)
+        |      end.
+</pre>
+</body>
+</html>
