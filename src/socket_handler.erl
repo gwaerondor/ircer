@@ -1,7 +1,6 @@
 -module(socket_handler).
 -include("irc.hrl").
--export([
-	 start/1,
+-export([start/1,
 	 receive_messages/1
 	]).
 -define(print_warning(Msg), printer:print_warning_message(Msg)).

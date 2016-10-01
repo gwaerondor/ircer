@@ -1,6 +1,5 @@
 -module(printer).
--export([
-	 print_incoming_server_message/1,
+-export([print_incoming_server_message/1,
 	 print_outgoing_server_message/1,
 	 print_warning_message/1,
 	 print_error_message/1,

@@ -21,7 +21,7 @@ parse_ping_message_test() ->
 get_space_separated_tokens_test() ->
     Msg = ":- ... it's good to b0rk ...",
     Incoming_data = "port80b.se.quakenet.org 372 Gwaeron2 " ++ Msg,
-    Result = codec:get_space_separated_tokens(Incoming_data, 3),
+    Result = codec:get_space_separated_tokens(Incoming_data, 4),
     Expected = ["port80b.se.quakenet.org", "372", "Gwaeron2", Msg],
     ?assertEqual(Expected, Result).
 
@@ -333,15 +333,15 @@ make_printable_nickname_change_message_test() ->
     Expected = "ALICENATOR is now called Alicetastic.",
     ?assertEqual(Expected, Result).
 
-text_before_bang_test() ->
+text_before_exclamation_mark_test() ->
     Text = "This! Is! Sparta!",
-    Result = codec:text_before_bang(Text),
+    Result = codec:text_before_exclamation_mark(Text),
     Expected = "This",
     ?assertEqual(Expected, Result).
 
-text_before_bang_without_bang_test() ->
+text_before_exclamation_mark_without_exclamation_marks_test() ->
     Text = "Who would like some bangers in the mouth?",
-    Result = codec:text_before_bang(Text),
+    Result = codec:text_before_exclamation_mark(Text),
     ?assertEqual(Text, Result).
 
 remove_leading_colon_test() ->				      
@@ -350,8 +350,8 @@ remove_leading_colon_test() ->
     ?assertEqual(":See you!", codec:remove_leading_colon("::See you!")).
 
 with_leading_pound_test() ->
-    ?assertEqual("#moongoose", codec:with_leading_pound("moongoose")),
-    ?assertEqual("#moongoose", codec:with_leading_pound("#moongoose")).
+    ?assertEqual("#moongoose", codec:ensure_leading_pound("moongoose")),
+    ?assertEqual("#moongoose", codec:ensure_leading_pound("#moongoose")).
 
 encode_join_with_pound_test() ->
     Outgoing = #message{type = join,

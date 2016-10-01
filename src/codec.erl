@@ -1,15 +1,14 @@
 -module(codec).
 -include("irc.hrl").
--export([
-	 decode_message/1,
+-export([decode_message/1,
 	 parse_lines/1,
 	 get_parameters/1,
 	 get_command/1,
 	 get_space_separated_tokens/2,
 	 make_printable/1,
 	 remove_leading_colon/1,
-	 with_leading_pound/1,
-	 text_before_bang/1,
+	 ensure_leading_pound/1,
+	 text_before_exclamation_mark/1,
 	 encode_message/1
 	]).
 -define(log(Msg), logger:write("codec", Msg)).
@@ -41,18 +40,28 @@ decode_message(Encoded_message) ->
 	    #message{type=unsupported, text=Encoded_message}
     end.
 
-get_command(Message) ->
-    Index_of_separator = string:chr(Message, $:),
-    string:substr(Message, 1, Index_of_separator).
+get_command(Text) ->
+    get_text_before($:, Text) ++ [$:].
+
+get_text_before(_, []) ->
+    [];
+get_text_before(Char, [Char|_]) ->
+    [];
+get_text_before(Char, [L|R]) ->
+    [L] ++ get_text_before(Char, R).
+
+get_text_after(Char, [Char|Text]) ->
+    Text;
+get_text_after(_, []) ->
+    [];
+get_text_after(Char, [_|Rest]) ->
+    get_text_after(Char, Rest).
 
 get_parameters(Message) ->
-    Index_of_separator = string:chr(Message, $:) + 1,
-    string:substr(Message, Index_of_separator).
+    get_text_after($:, Message).
 
 decode_server_message(Server_message) ->
-
-    [_Sender, Code, _Remainder] = get_space_separated_tokens(Server_message, 2),
-    case Code of
+    case get_code(Server_message) of
 	"JOIN" ->
 	    decode_join_message(Server_message);
 	"MODE" ->
@@ -85,14 +94,18 @@ decode_server_message(Server_message) ->
 	    #message{type=unsupported, text=Server_message}
     end.
 
+get_code(Server_message) ->
+    [_, Code, _] = get_space_separated_tokens(Server_message, 3),
+    Code.
+
 decode_cannot_send_to_channel(Message) ->
-    [_, _, _, Channel, CSTCMessage] = get_space_separated_tokens(Message, 4),
+    [_, _, _, Channel, CSTCMessage] = get_space_separated_tokens(Message, 5),
     Text = remove_leading_colon(CSTCMessage) ++ " " ++ Channel,
     #message{type = other,
 	     text = Text}.
 
 decode_private_message(Message) ->
-    [Sender, _, Target, Chat_msg] = get_space_separated_tokens(Message, 3),
+    [Sender, _, Target, Chat_msg] = get_space_separated_tokens(Message, 4),
     #message{type = privmsg,
 	     sender = remove_leading_colon(Sender),
 	     receiver = Target,
@@ -100,14 +113,14 @@ decode_private_message(Message) ->
 	    }.
 
 decode_nick_message(Message) ->
-    [Sender, _, New_nick] = get_space_separated_tokens(Message, 2),
+    [Sender, _, New_nick] = get_space_separated_tokens(Message, 3),
     #message{type = nick,
 	     sender = remove_leading_colon(Sender),
 	     text = remove_leading_colon(New_nick)
 	    }.
 
 decode_nick_in_use_message(Message) ->
-    [Sender, _, Old_nick, Attempted_nick, Error_message] = get_space_separated_tokens(Message, 4),
+    [Sender, _, Old_nick, Attempted_nick, Error_message] = get_space_separated_tokens(Message, 5),
     ?log("Could not change nickname, " ++ Attempted_nick ++ " already in use."),
     #message{type = nick_in_use,
 	     sender = remove_leading_colon(Sender),
@@ -116,14 +129,14 @@ decode_nick_in_use_message(Message) ->
 	    }.
 
 decode_part_message(Message) ->
-    [Sender, _, Channel] = get_space_separated_tokens(Message, 2),
+    [Sender, _, Channel] = get_space_separated_tokens(Message, 3),
     #message{type = part,
 	     channel = Channel,
 	     sender = Sender
 	    }.
 
 decode_kick_message(Message) ->
-    [Sender, _Code, Channel, Receiver, Kick_message] = get_space_separated_tokens(Message, 4),
+    [Sender, _Code, Channel, Receiver, Kick_message] = get_space_separated_tokens(Message, 5),
     #message{type = kick,
 	     channel = Channel,
 	     receiver = Receiver,
@@ -132,14 +145,14 @@ decode_kick_message(Message) ->
 	    }.
 
 decode_quit_message(Message) ->	     
-    [Sender, _, Quit_msg] = get_space_separated_tokens(Message,2),
+    [Sender, _, Quit_msg] = get_space_separated_tokens(Message,3),
     #message{type = quit,
 	     sender = remove_leading_colon(Sender),
 	     text = remove_leading_colon(Quit_msg)
 	    }.
 
 decode_motd(Message) ->
-    [Sender, _, Nick, MOTD] = get_space_separated_tokens(Message,3),
+    [Sender, _, Nick, MOTD] = get_space_separated_tokens(Message,4),
     #message{type=motd,
 	     sender=remove_leading_colon(Sender),
 	     receiver=Nick,
@@ -147,7 +160,7 @@ decode_motd(Message) ->
 	    }.
 
 decode_name_list_message(Message) ->
-    [Sender, _, Nick, _, Channel, List] = get_space_separated_tokens(Message,5),
+    [Sender, _, Nick, _, Channel, List] = get_space_separated_tokens(Message,6),
     #message{type=namelist,
 	     sender=remove_leading_colon(Sender),
 	     receiver=Nick,
@@ -156,7 +169,7 @@ decode_name_list_message(Message) ->
 	    }.
 
 decode_end_of_name_list_message(Message) ->
-    [Sender, _, Nick, Channel, End_message] = get_space_separated_tokens(Message,4),
+    [Sender, _, Nick, Channel, End_message] = get_space_separated_tokens(Message,5),
     #message{type=end_of_namelist,
 	     sender=remove_leading_colon(Sender),
 	     receiver=Nick,
@@ -165,7 +178,7 @@ decode_end_of_name_list_message(Message) ->
 	    }.
 
 decode_topic_message(Message) ->
-    [Sender, _, Nick, Channel, Topic] = get_space_separated_tokens(Message, 4),
+    [Sender, _, Nick, Channel, Topic] = get_space_separated_tokens(Message, 5),
     #message{type=topic,
 	     sender=remove_leading_colon(Sender),
 	     receiver=Nick,
@@ -174,14 +187,14 @@ decode_topic_message(Message) ->
 	    }.
 
 decode_join_message(Message) ->
-    [Sender, _, Channel] = get_space_separated_tokens(Message, 2),
+    [Sender, _, Channel] = get_space_separated_tokens(Message, 3),
     #message{type=join,
 	     sender=remove_leading_colon(Sender),
 	     channel=Channel
 	    }.
 
 decode_mode_message(Message) ->
-    [Sender, _, Nick, Mode] = get_space_separated_tokens(Message, 3),
+    [Sender, _, Nick, Mode] = get_space_separated_tokens(Message, 4),
     #message{type=mode,
 	     sender=remove_leading_colon(Sender),
 	     receiver=Nick,
@@ -189,29 +202,20 @@ decode_mode_message(Message) ->
 	    }.
 
 decode_notice_message(Message) ->
-    [Sender, _, Nick, Notice] = get_space_separated_tokens(Message, 3),
+    [Sender, _, Nick, Notice] = get_space_separated_tokens(Message, 4),
     #message{type=notice,
 	     sender=remove_leading_colon(Sender),
 	     receiver=Nick,
 	     text=remove_leading_colon(Notice)
 	    }.
 
+remove_leading_colon([$:|Text]) ->
+    Text;
 remove_leading_colon(Text) ->
-    case string:chr(Text, $:) of
-	1 ->
-	    string:substr(Text, 2);
-	_ ->
-	    Text
-    end.
+    Text.
 
-text_before_bang(Text) ->
-    Index_before_bang = string:chr(Text, $!)-1,
-    case (Index_before_bang > 0) of
-	true ->
-	    string:substr(Text,1,Index_before_bang);
-	_ ->
-	    Text
-    end.
+text_before_exclamation_mark(Text) ->
+    get_text_before($!, Text).
 
 make_printable(Decoded_message) ->
     Type = Decoded_message#message.type,
@@ -220,22 +224,22 @@ make_printable(Decoded_message) ->
 	    "Ping?";
 	join ->
 	    Channel = Decoded_message#message.channel,
-	    Nick = text_before_bang(Decoded_message#message.sender),
+	    Nick = text_before_exclamation_mark(Decoded_message#message.sender),
 	    Nick ++ " has joined " ++ Channel;
 	mode ->
-	    Sender = text_before_bang(Decoded_message#message.sender),
+	    Sender = text_before_exclamation_mark(Decoded_message#message.sender),
 	    Target = Decoded_message#message.receiver,
 	    Mode = Decoded_message#message.text,
 	    Sender ++ " sets mode " ++ Mode ++ " to " ++ Target;
 	kick ->
-	    Sender = text_before_bang(Decoded_message#message.sender),
+	    Sender = text_before_exclamation_mark(Decoded_message#message.sender),
 	    Target = Decoded_message#message.receiver,
 	    Kick_msg = Decoded_message#message.text,
 	    Channel = Decoded_message#message.channel,
 	    Sender ++ " has kicked " ++ Target ++ " from " ++ Channel ++ " (" ++ Kick_msg  ++ ")";
 	privmsg ->
 	    Receiver = Decoded_message#message.receiver,
-	    Sender = text_before_bang(Decoded_message#message.sender),
+	    Sender = text_before_exclamation_mark(Decoded_message#message.sender),
 	    Message = Decoded_message#message.text,
 	    case string:chr(Receiver, $#) of
 		1 ->
@@ -245,14 +249,14 @@ make_printable(Decoded_message) ->
 		    ?TIMESTAMP ++ " -"++Sender++"- " ++Message
 	    end;
 	quit ->
-	    Sender = text_before_bang(Decoded_message#message.sender),
+	    Sender = text_before_exclamation_mark(Decoded_message#message.sender),
 	    Sender ++ " has quit IRC (" ++ Decoded_message#message.text ++ ")";
 	part ->
-	    Sender = text_before_bang(Decoded_message#message.sender),
+	    Sender = text_before_exclamation_mark(Decoded_message#message.sender),
 	    Channel = Decoded_message#message.channel,
 	    Sender ++ " has left " ++ Channel;
 	nick ->
-	    Old_nick = text_before_bang(Decoded_message#message.sender),
+	    Old_nick = text_before_exclamation_mark(Decoded_message#message.sender),
 	    New_nick = Decoded_message#message.text,
 	    Old_nick ++ " is now called " ++ New_nick ++ ".";
 	unsupported ->
@@ -262,20 +266,7 @@ make_printable(Decoded_message) ->
     end.
 
 get_space_separated_tokens(String, Number_of_splits) ->
-    get_space_separated_tokens(String, Number_of_splits, []).
-get_space_separated_tokens(String, 0, Acc) ->
-    Acc ++ [String];
-get_space_separated_tokens(String, Number_of_splits, Acc) ->
-    Index_of_first_space = string:chr(String, $\s),
-    Index_of_last_char_before_first_space = Index_of_first_space-1,
-    Index_of_first_char_after_first_space = Index_of_first_space+1,
-    Index_of_first_letter = 1,
-    Token = string:substr(String,
-			  Index_of_first_letter,
-			  Index_of_last_char_before_first_space
-			 ),
-    Remainder = string:substr(String, Index_of_first_char_after_first_space),
-    get_space_separated_tokens(Remainder, Number_of_splits - 1, Acc ++ [Token]).
+    re:split(String, "\\s", [{return, list}, {parts, Number_of_splits}]).
 
 encode_message(Message) ->
     Type = Message#message.type,
@@ -304,7 +295,7 @@ encode_nick_message(Nickname) ->
     "NICK :"++Nickname.
 
 encode_part_message(Channel, Message) ->
-    "PART " ++ with_leading_pound(Channel) ++ " :" ++ Message.
+    "PART " ++ ensure_leading_pound(Channel) ++ " :" ++ Message.
 
 encode_quit_message(Message) ->
     "QUIT :" ++ Message.
@@ -319,12 +310,9 @@ encode_pong_message(Number) ->
     "PONG :" ++ Number.
 
 encode_join_message(Channel) ->
-    "JOIN :" ++ with_leading_pound(Channel).
+    "JOIN :" ++ ensure_leading_pound(Channel).
 
-with_leading_pound(Text) ->
-    case string:chr(Text, $#) of
-	1 ->
-	    Text;
-	_ ->
-	    "#" ++ Text
-    end.
+ensure_leading_pound([$#|_] = Text) ->
+    Text;
+ensure_leading_pound(Text) ->
+    [$#|Text].
