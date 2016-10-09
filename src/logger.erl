@@ -1,4 +1,5 @@
 -module(logger).
+-include("irc.hrl").
 -export([write/2,
 	 generate_timestamp/0,
 	 generate_date_timestamp/0,
@@ -7,9 +8,9 @@
 	]).
 
 write(Module, Message) ->
-    Timestamp = generate_timestamp(),
-    Message_to_write = "["++Timestamp++"] " ++ Module ++ ": " ++ Message ++ "\n",
-    file:write_file("./ircer.log", Message_to_write,[append]).
+    Format = "[~s] ~s: ~s",
+    Output_message = io_lib:format(Format, [?TIMESTAMP, Module, Message]),
+    file:write_file("./ircer.log", Output_message, [append]).
 
 generate_date_timestamp() ->
     Time_text = generate_timestamp(),
@@ -17,24 +18,16 @@ generate_date_timestamp() ->
     Date_text ++ " " ++ Time_text.
 
 generate_datestamp() ->
-    {Date, _} = calendar:local_time(),
-    {Year_now, Month_now, Day_now} = Date,
-    integer_to_list(Year_now) ++ "-" ++
-	time_with_two_digits(Month_now) ++ "-" ++
-	time_with_two_digits(Day_now).
+    {{Year, Month, Day}, _} = calendar:local_time(),
+    integer_to_list(Year) ++ "-" ++
+	time_with_two_digits(Month) ++ "-" ++
+	time_with_two_digits(Day).
 
 generate_timestamp() ->
-    {_, Time} = calendar:local_time(),
-    {Hour_now, Minute_now, Second_now} = Time,
-    time_with_two_digits(Hour_now) ++ ":" ++
-	time_with_two_digits(Minute_now) ++ ":" ++
-	time_with_two_digits(Second_now).
-    
+    {_, {Hour, Minute, Second}} = calendar:local_time(),
+    time_with_two_digits(Hour) ++ ":" ++
+	time_with_two_digits(Minute) ++ ":" ++
+	time_with_two_digits(Second).
 
 time_with_two_digits(Any_time_unit) ->
-    case Any_time_unit < 10 of
-	true ->
-	    "0" ++ integer_to_list(Any_time_unit);
-	false ->
-	    integer_to_list(Any_time_unit)
-    end.
+    lists:flatten(io_lib:format("~2..0B", [Any_time_unit])).

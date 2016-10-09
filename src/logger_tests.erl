@@ -9,7 +9,7 @@ generate_date_timestamp_test() ->
     {Date, Time} = calendar:local_time(),
     {Year, Month, Day} = Date,
     {Hour, Minute, Second} = Time,
-    Year_t = logger:time_with_two_digits(Year),
+    Year_t = integer_to_list(Year),
     Month_t = logger:time_with_two_digits(Month),
     Day_t = logger:time_with_two_digits(Day),
     Hour_t = logger:time_with_two_digits(Hour),
