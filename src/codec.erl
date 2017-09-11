@@ -236,37 +236,19 @@ make_printable(Decoded_message) ->
 	mode ->
 	    make_printable_mode_message(Decoded_message);
 	kick ->
-	    Sender = text_before_exclamation_mark(Decoded_message#message.sender),
-	    Target = Decoded_message#message.receiver,
-	    Kick_msg = Decoded_message#message.text,
-	    Channel = Decoded_message#message.channel,
-	    Sender ++ " has kicked " ++ Target ++ " from " ++ Channel ++ " (" ++ Kick_msg  ++ ")";
+	    make_printable_kick_message(Decoded_message);
 	privmsg ->
-	    Receiver = Decoded_message#message.receiver,
-	    Sender = text_before_exclamation_mark(Decoded_message#message.sender),
-	    Message = Decoded_message#message.text,
-	    case string:chr(Receiver, $#) of
-		1 ->
-		    Channel = Decoded_message#message.receiver,
-		    ?TIMESTAMP ++ " "++Channel++" ("++Sender++") " ++Message;
-		_ ->
-		    ?TIMESTAMP ++ " -"++Sender++"- " ++Message
-	    end;
+	    make_printable_privmsg(Decoded_message);
 	quit ->
-	    Sender = text_before_exclamation_mark(Decoded_message#message.sender),
-	    Sender ++ " has quit IRC (" ++ Decoded_message#message.text ++ ")";
+	    make_printable_quit_message(Decoded_message);
 	part ->
-	    Sender = text_before_exclamation_mark(Decoded_message#message.sender),
-	    Channel = Decoded_message#message.channel,
-	    Sender ++ " has left " ++ Channel;
+	    make_printable_part_message(Decoded_message);
 	nick ->
-	    Old_nick = text_before_exclamation_mark(Decoded_message#message.sender),
-	    New_nick = Decoded_message#message.text,
-	    Old_nick ++ " is now called " ++ New_nick ++ ".";
+	    make_printable_nick_message(Decoded_message);
 	unsupported ->
-	    "? " ++ Decoded_message#message.text;
+	    make_printable_unsupported_message(Decoded_message);
 	_ ->
-	    Decoded_message#message.text
+	    make_printable_generic_message(Decoded_message)
     end.
 
 make_printable_join_message(Decoded_message) ->
@@ -280,8 +262,51 @@ make_printable_mode_message(Decoded_message) ->
     Mode = Decoded_message#message.text,
     Sender ++ " sets mode " ++ Mode ++ " to " ++ Target.
 
+make_printable_kick_message(Decoded_message) ->
+    Sender = text_before_exclamation_mark(Decoded_message#message.sender),
+    Target = Decoded_message#message.receiver,
+    Kick_msg = Decoded_message#message.text,
+    Channel = Decoded_message#message.channel,
+    Sender ++ " has kicked " ++ Target ++ " from " ++ Channel ++ " (" ++ Kick_msg  ++ ")".
+
+make_printable_privmsg(Decoded_message) ->
+    Target = Decoded_message#message.receiver,
+    Sender = text_before_exclamation_mark(Decoded_message#message.sender),
+    Message = Decoded_message#message.text,
+    case get_privmsg_type(Target) of
+	channel ->
+	    ?TIMESTAMP ++ " " ++ Target ++ " (" ++ Sender ++ ") " ++ Message;
+	private ->
+	    ?TIMESTAMP ++ " -" ++ Sender ++ "- " ++ Message
+    end.
+
+get_privmsg_type([$# | _]) ->
+    channel;
+get_privmsg_type(_) ->
+    private.
+
+make_printable_quit_message(Decoded_message) ->
+    Sender = text_before_exclamation_mark(Decoded_message#message.sender),
+    Sender ++ " has quit IRC (" ++ Decoded_message#message.text ++ ")".
+
+make_printable_part_message(Decoded_message) ->
+    Sender = text_before_exclamation_mark(Decoded_message#message.sender),
+    Channel = Decoded_message#message.channel,
+    Sender ++ " has left " ++ Channel.
+
 get_space_separated_tokens(String, Number_of_splits) ->
     re:split(String, "\\s", [{return, list}, {parts, Number_of_splits}]).
+
+make_printable_nick_message(Decoded_message) ->
+    Old_nick = text_before_exclamation_mark(Decoded_message#message.sender),
+    New_nick = Decoded_message#message.text,
+    Old_nick ++ " is now called " ++ New_nick ++ ".".
+
+make_printable_unsupported_message(Decoded_message) ->
+    "? " ++ Decoded_message#message.text.
+
+make_printable_generic_message(Decoded_message) ->
+    Decoded_message#message.text.
 
 encode_message(Message) ->
     Type = Message#message.type,
@@ -303,7 +328,7 @@ encode_message(Message) ->
 	    Part_msg = Message#message.text,
 	    encode_part_message(Channel, Part_msg);
 	quit ->
-	    encode_quit_message(Message#message.text)		
+	    encode_quit_message(Message#message.text)
     end.
 
 encode_nick_message(Nickname) ->
