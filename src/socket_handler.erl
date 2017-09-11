@@ -20,7 +20,7 @@ start(Sock) ->
 receive_messages(Sock) ->
     case gen_tcp:recv(Sock, 0) of
 	{ok, Msg} ->	
-	    ?MODULE ! {tcp, Sock, Msg},
+	    ?MODULE ! {incoming, Sock, Msg},
 	    receive_messages(Sock);
 	{error, closed} ->
 	    ?log("Connection has been closed."),
@@ -29,10 +29,13 @@ receive_messages(Sock) ->
 	Error ->
 	    ErrorStr = io_lib:format("~p",[Error]),
 	    ?MODULE ! quit,
-	    ?log("Error in message receiver: " ++ ErrorStr),
-	    ?log("Message receiver is shutting down. Your connection has been closed."),
-	    ?print_err("Error in message receiver: " ++ ErrorStr),
-	    ?print_err("Message receiver is shutting down. Your connection has been closed.")
+	    Error_message_receiver = "Error in message receiver: " ++ ErrorStr,
+	    Error_message_closing = "Message receiver is shutting down. "
+                                    "Your connection has been closed.",
+	    ?log(Error_message_receiver),
+	    ?log(Error_message_closing),
+	    ?print_err(Error_message_receiver),
+	    ?print_err(Error_message_closing)
     end.
 
 handle_messages_until_exit(Sock) ->
@@ -40,10 +43,10 @@ handle_messages_until_exit(Sock) ->
 
 handle_messages_until_exit(Sock, Message_rest) ->
     receive
-	{message, Outgoing_message} ->
+	{outgoing, Outgoing_message} ->
 	    send_to_server(Sock, Outgoing_message),
 	    handle_messages_until_exit(Sock, Message_rest);
-	{tcp, Sock, Incoming_msg} ->
+	{incoming, Sock, Incoming_msg} ->
 	    {Msgs, Unfinished_msg} = codec:parse_lines(Message_rest ++ Incoming_msg),
 	    ircer_app:handle_messages(Msgs),
 	    handle_messages_until_exit(Sock, Unfinished_msg);

@@ -32,19 +32,19 @@ send_ident(Nickname, Realname) ->
 		     sender = Nickname,
 		     text = Realname
 		    },
-    socket_handler ! {message, codec:encode_message(Ident)}.
+    socket_handler ! {outgoing, codec:encode_message(Ident)}.
 
 % This is where the user commands live.
 msg(Target, Message) ->
     Outgoing = #message{type=privmsg, receiver=Target, text=Message},
     Outgoing_enc = codec:encode_message(Outgoing),
-    socket_handler ! {message, Outgoing_enc}.
+    socket_handler ! {outgoing, Outgoing_enc}.
 
 join(Channel) ->
     Outgoing = #message{type=join, channel=Channel},
     Outgoing_enc = codec:encode_message(Outgoing),
     ?log("Joining channel " ++ Channel),
-    socket_handler ! {message, Outgoing_enc}.
+    socket_handler ! {outgoing, Outgoing_enc}.
 
 nick(Nickname) ->
     Outgoing = #message{type = nick,
@@ -52,7 +52,7 @@ nick(Nickname) ->
 		      },
     Outgoing_enc = codec:encode_message(Outgoing),
     ?log("Changing nickname to " ++ Nickname),
-    socket_handler ! {message, Outgoing_enc}.
+    socket_handler ! {outgoing, Outgoing_enc}.
 
 part(Channel) ->
     part(Channel, "").
@@ -63,7 +63,7 @@ part(Channel, Message) ->
 			text = Message},
     Outgoing_enc = codec:encode_message(Outgoing),
     ?log("Parted channel " ++ Channel),
-    socket_handler ! {message, Outgoing_enc}.
+    socket_handler ! {outgoing, Outgoing_enc}.
 
 quit(Message) ->
     % How do I check if a node/process is active?
@@ -72,7 +72,7 @@ quit(Message) ->
 			text = Message},
     Outgoing_enc = codec:encode_message(Outgoing),
     ?log("Quitting IRCer."),
-    socket_handler ! {message, Outgoing_enc},
+    socket_handler ! {outgoing, Outgoing_enc},
     socket_handler ! quit.
 
 quit() ->

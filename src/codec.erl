@@ -25,7 +25,6 @@ get_full_lines(Message) ->
     Last_separator_end_index = Last_separator_start_index + 1,
     First_char_index = 1,
     Full_lines = string:substr(Message, First_char_index, Last_separator_end_index),
-    io:format(user, "Full lines: ~p~n", [Full_lines]),
     re:split(Full_lines, Separator, [{return, list}, trim]).
 
 get_unfinished_line(Message) ->

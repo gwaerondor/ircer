@@ -67,12 +67,11 @@ connect(Server, Port, Nickname, Realname) ->
 				       realname = Realname
 				      },
     ?log("Trying to connect to "++ Server ++ " as " ++ Nickname),
-    connect_sequence([
-		      open_connection(),
+    connect_sequence([open_connection(),
 		      start_socket_handler(),
 		      request_nick(),
-		      send_ident()
-		     ], Connection_data),
+		      send_ident()],
+		     Connection_data),
     ok.
 
 connect_sequence([], _Connection_data)->
@@ -142,6 +141,6 @@ handle_messages([]) ->
 pong(Number) ->
     Outgoing = #message{type=pong, text=Number},
     Outgoing_enc = codec:encode_message(Outgoing),
-    socket_handler ! {message, Outgoing_enc},
+    socket_handler ! {outgoing, Outgoing_enc},
     ?log("Pong " ++ Number).
 
