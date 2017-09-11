@@ -1,12 +1,10 @@
 -module(codec_tests).
-
--ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 -include("irc.hrl").
 
 parse_lines_test() ->
-    Incoming_data = "First\r\nSecond\r\nThird\r\nHalf",
-    Expected = {["First", "Second", "Third"], "Half"},
+    Incoming_data = "First\r\nSecond\r\nThird\r\nUnfinished line",
+    Expected = {["First", "Second", "Third"], "Unfinished line"},
     Result = codec:parse_lines(Incoming_data),
     ?assertEqual(Expected, Result).
 
@@ -44,7 +42,7 @@ decode_quit_message_test() ->
 		       },
     ?assertEqual(Expected, Result).
 
-decode_motd_test() ->
+decode_message_of_the_day_test() ->
     Incoming_data = ":port80b.se.quakenet.org 372 Gwaeron :- ... The use of this server & network is a privilege, not a right.",
     Result = codec:decode_message(Incoming_data),
     Expected = #message{type = motd,
@@ -117,33 +115,38 @@ decode_notice_message_test() ->
     ?assertEqual(Expected, Result).
 
 decode_name_list_test() ->
-    Incoming_data=":port80b.se.quakenet.org 353 gwaeron @ #n-next :gwaeron @meroigo Akisto vrklgn Neophos Sephy Smaul +zaken +hanoi @Rockabilly_Joe @Q rotor LJUNGBY kenzoku Eleton",
+    Incoming_data= ":port80b.se.quakenet.org 353 gwaeron @ #n-next :gwaeron "
+                   "@meroigo Akisto vrklgn Neophos Sephy Smaul +zaken +hanoi "
+                   "@Rockabilly_Joe @Q rotor LJUNGBY kenzoku Eleton",
     Expected = #message{type = namelist,
 			sender = "port80b.se.quakenet.org",
-		        receiver = "gwaeron", channel="#n-next",
-			text = "gwaeron @meroigo Akisto vrklgn Neophos Sephy Smaul +zaken +hanoi @Rockabilly_Joe @Q rotor LJUNGBY kenzoku Eleton"
+		        receiver = "gwaeron",
+			channel = "#n-next",
+			text = "gwaeron @meroigo Akisto vrklgn Neophos Sephy "
+                               "Smaul +zaken +hanoi @Rockabilly_Joe @Q rotor "
+                               "LJUNGBY kenzoku Eleton"
 		       },
     Result = codec:decode_message(Incoming_data),
     ?assertEqual(Expected, Result).
 
 decode_end_of_name_list_test() ->
     Incoming_data = ":port80b.se.quakenet.org 366 gwaeron #n-next :End of /NAMES list.",
-    Expected = #message{type=end_of_namelist,
-			sender="port80b.se.quakenet.org",
-		        receiver="gwaeron",
-			channel="#n-next",
-			text="End of /NAMES list."
+    Expected = #message{type = end_of_namelist,
+			sender = "port80b.se.quakenet.org",
+		        receiver = "gwaeron",
+			channel = "#n-next",
+			text = "End of /NAMES list."
 		       },
     Result = codec:decode_message(Incoming_data),
     ?assertEqual(Expected, Result).
 
 decode_topic_test() ->
     Incoming_data = ":port80b.se.quakenet.org 332 gwaeron #n-next :The topic! ^_^",
-    Expected = #message{type=topic,
-			sender="port80b.se.quakenet.org",
-			receiver="gwaeron",
-			channel="#n-next",
-			text="The topic! ^_^"
+    Expected = #message{type = topic,
+			sender = "port80b.se.quakenet.org",
+			receiver = "gwaeron",
+			channel = "#n-next",
+			text = "The topic! ^_^"
 		       },
     Result = codec:decode_message(Incoming_data),
     ?assertEqual(Expected, Result).
@@ -217,9 +220,6 @@ use_ping_to_make_pong_test() ->
 		       },
     Pong = codec:encode_message(Outgoing),
     ?assertEqual("PONG :1213141516", Pong).
-
-% All the make_printable tests need to be rewritten to
-% work with #message records instead of tuples.
 
 make_printable_quit_message_test() ->
     Message = #message{type = quit,
@@ -344,14 +344,16 @@ text_before_exclamation_mark_without_exclamation_marks_test() ->
     Result = codec:text_before_exclamation_mark(Text),
     ?assertEqual(Text, Result).
 
-remove_leading_colon_test() ->				      
-    ?assertEqual("Hello", codec:remove_leading_colon(":Hello")),
-    ?assertEqual("Good bye", codec:remove_leading_colon("Good bye")),
-    ?assertEqual(":See you!", codec:remove_leading_colon("::See you!")).
+remove_leading_colon_test_() ->				      
+    [?_assertEqual("Hello", codec:remove_leading_colon(":Hello")),
+     ?_assertEqual("Good bye", codec:remove_leading_colon("Good bye")),
+     ?_assertEqual(":See you!", codec:remove_leading_colon("::See you!"))
+    ].
 
 with_leading_pound_test() ->
-    ?assertEqual("#moongoose", codec:ensure_leading_pound("moongoose")),
-    ?assertEqual("#moongoose", codec:ensure_leading_pound("#moongoose")).
+    [?_assertEqual("#moongoose", codec:ensure_leading_pound("moongoose")),
+     ?_assertEqual("#moongoose", codec:ensure_leading_pound("#moongoose"))
+    ].
 
 encode_join_with_pound_test() ->
     Outgoing = #message{type = join,
@@ -385,5 +387,3 @@ encode_pong_message_test() ->
     Result = codec:encode_message(Outgoing_message),
     Expected = "PONG :1234567890",
     ?assertEqual(Expected, Result).
-
--endif.

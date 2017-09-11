@@ -11,20 +11,35 @@
 	 text_before_exclamation_mark/1,
 	 encode_message/1
 	]).
+
 -define(log(Msg), logger:write("codec", Msg)).
 
 parse_lines(Message) ->
-    % Since rstr() gives the index to where the
-    % separator STARTS, we'll compensate for that
-    % by adding 1 (to end at \r) or 2 (to start at \n)
+    Full_lines = get_full_lines(Message),
+    Unfinished_line = get_unfinished_line(Message),
+    {Full_lines, Unfinished_line}.
+
+get_full_lines(Message) ->
     Separator = "\r\n",
     Last_separator_start_index = string:rstr(Message, Separator),
-    Index_of_first_char_after_separator = Last_separator_start_index + 2,
     Last_separator_end_index = Last_separator_start_index + 1,
-    Rest = string:substr(Message, Index_of_first_char_after_separator),
     First_char_index = 1,
-    Full_lines = string:substr(Message,First_char_index, Last_separator_end_index),
-    {string:tokens(Full_lines, "\r\n"), Rest}.
+    Full_lines = string:substr(Message, First_char_index, Last_separator_end_index),
+    io:format(user, "Full lines: ~p~n", [Full_lines]),
+    re:split(Full_lines, Separator, [{return, list}, trim]).
+
+get_unfinished_line(Message) ->
+    get_everything_after_last_separator(Message).
+
+get_everything_after_last_separator(Message) ->
+    lists:reverse(geals(lists:reverse(Message))).
+
+geals([]) ->
+    [];
+geals([$\n, $\r | _]) ->
+    [];
+geals([C | Rest]) ->
+    [C | geals(Rest)].
 
 decode_message(Encoded_message) ->
     case get_command(Encoded_message) of
@@ -61,38 +76,27 @@ get_parameters(Message) ->
     get_text_after($:, Message).
 
 decode_server_message(Server_message) ->
-    case get_code(Server_message) of
-	"JOIN" ->
-	    decode_join_message(Server_message);
-	"MODE" ->
-	    decode_mode_message(Server_message);
-	"NOTICE" ->
-	    decode_notice_message(Server_message);
-	"PRIVMSG" ->
-	    decode_private_message(Server_message);
-	"QUIT" ->
-	    decode_quit_message(Server_message);
-	"KICK" ->
-	    decode_kick_message(Server_message);
-	"PART" ->
-	    decode_part_message(Server_message);
-	"NICK" ->
-	    decode_nick_message(Server_message);
-	"332" ->
-	    decode_topic_message(Server_message);
-	"366" ->
-	    decode_end_of_name_list_message(Server_message);
-	"353" ->
-	    decode_name_list_message(Server_message);
-	"372" ->
-	    decode_motd(Server_message);
-	"404" ->
-	    decode_cannot_send_to_channel(Server_message);
-	"433" ->
-	    decode_nick_in_use_message(Server_message);
-	_ ->
-	    #message{type=unsupported, text=Server_message}
-    end.
+    Code = get_code(Server_message),
+    Action = get_action_for_message_code(Code),
+    Action(Server_message).
+
+get_action_for_message_code(Code) ->
+    Actions = #{"JOIN" => fun decode_join_message/1,
+		"MODE" => fun decode_mode_message/1,
+		"NOTICE" => fun decode_notice_message/1,
+		"PRIVMSG" => fun decode_private_message/1,
+		"QUIT" => fun decode_quit_message/1,
+		"KICK" => fun decode_kick_message/1,
+		"PART" => fun decode_part_message/1,
+		"NICK" => fun decode_nick_message/1,
+		"332" => fun decode_topic_message/1,
+		"366" => fun decode_end_of_name_list_message/1,
+		"353" => fun decode_name_list_message/1,
+		"372" => fun decode_motd/1,
+		"404" => fun decode_cannot_send_to_channel/1,
+		"433" => fun decode_nick_in_use_message/1},
+    Default = fun decode_unsupported_message/1,
+    maps:get(Code, Actions, Default).
 
 get_code(Server_message) ->
     [_, Code, _] = get_space_separated_tokens(Server_message, 3),
@@ -153,60 +157,65 @@ decode_quit_message(Message) ->
 
 decode_motd(Message) ->
     [Sender, _, Nick, MOTD] = get_space_separated_tokens(Message,4),
-    #message{type=motd,
-	     sender=remove_leading_colon(Sender),
-	     receiver=Nick,
-	     text=remove_leading_colon(MOTD)
+    #message{type = motd,
+	     sender = remove_leading_colon(Sender),
+	     receiver = Nick,
+	     text = remove_leading_colon(MOTD)
 	    }.
 
 decode_name_list_message(Message) ->
     [Sender, _, Nick, _, Channel, List] = get_space_separated_tokens(Message,6),
-    #message{type=namelist,
-	     sender=remove_leading_colon(Sender),
-	     receiver=Nick,
-	     channel=Channel,
-	     text=remove_leading_colon(List)
+    #message{type = namelist,
+	     sender = remove_leading_colon(Sender),
+	     receiver = Nick,
+	     channel = Channel,
+	     text = remove_leading_colon(List)
 	    }.
 
 decode_end_of_name_list_message(Message) ->
     [Sender, _, Nick, Channel, End_message] = get_space_separated_tokens(Message,5),
-    #message{type=end_of_namelist,
-	     sender=remove_leading_colon(Sender),
-	     receiver=Nick,
-	     channel=Channel,
-	     text=remove_leading_colon(End_message)
+    #message{type = end_of_namelist,
+	     sender = remove_leading_colon(Sender),
+	     receiver = Nick,
+	     channel = Channel,
+	     text = remove_leading_colon(End_message)
 	    }.
 
 decode_topic_message(Message) ->
     [Sender, _, Nick, Channel, Topic] = get_space_separated_tokens(Message, 5),
-    #message{type=topic,
-	     sender=remove_leading_colon(Sender),
-	     receiver=Nick,
-	     channel=Channel,
-	     text=remove_leading_colon(Topic)
+    #message{type = topic,
+	     sender = remove_leading_colon(Sender),
+	     receiver = Nick,
+	     channel = Channel,
+	     text = remove_leading_colon(Topic)
 	    }.
 
 decode_join_message(Message) ->
     [Sender, _, Channel] = get_space_separated_tokens(Message, 3),
-    #message{type=join,
-	     sender=remove_leading_colon(Sender),
-	     channel=Channel
+    #message{type = join,
+	     sender = remove_leading_colon(Sender),
+	     channel = Channel
 	    }.
 
 decode_mode_message(Message) ->
     [Sender, _, Nick, Mode] = get_space_separated_tokens(Message, 4),
-    #message{type=mode,
-	     sender=remove_leading_colon(Sender),
-	     receiver=Nick,
-	     text=Mode
+    #message{type = mode,
+	     sender = remove_leading_colon(Sender),
+	     receiver = Nick,
+	     text = Mode
 	    }.
 
 decode_notice_message(Message) ->
     [Sender, _, Nick, Notice] = get_space_separated_tokens(Message, 4),
-    #message{type=notice,
-	     sender=remove_leading_colon(Sender),
-	     receiver=Nick,
-	     text=remove_leading_colon(Notice)
+    #message{type = notice,
+	     sender = remove_leading_colon(Sender),
+	     receiver = Nick,
+	     text = remove_leading_colon(Notice)
+	    }.
+
+decode_unsupported_message(Message) ->
+    #message{type = unsupported,
+	     text = Message
 	    }.
 
 remove_leading_colon([$:|Text]) ->
@@ -223,14 +232,9 @@ make_printable(Decoded_message) ->
 	ping ->
 	    "Ping?";
 	join ->
-	    Channel = Decoded_message#message.channel,
-	    Nick = text_before_exclamation_mark(Decoded_message#message.sender),
-	    Nick ++ " has joined " ++ Channel;
+	    make_printable_join_message(Decoded_message);
 	mode ->
-	    Sender = text_before_exclamation_mark(Decoded_message#message.sender),
-	    Target = Decoded_message#message.receiver,
-	    Mode = Decoded_message#message.text,
-	    Sender ++ " sets mode " ++ Mode ++ " to " ++ Target;
+	    make_printable_mode_message(Decoded_message);
 	kick ->
 	    Sender = text_before_exclamation_mark(Decoded_message#message.sender),
 	    Target = Decoded_message#message.receiver,
@@ -264,6 +268,17 @@ make_printable(Decoded_message) ->
 	_ ->
 	    Decoded_message#message.text
     end.
+
+make_printable_join_message(Decoded_message) ->
+    Channel = Decoded_message#message.channel,
+    Nick = text_before_exclamation_mark(Decoded_message#message.sender),
+    Nick ++ " has joined " ++ Channel.
+
+make_printable_mode_message(Decoded_message) ->
+    Sender = text_before_exclamation_mark(Decoded_message#message.sender),
+    Target = Decoded_message#message.receiver,
+    Mode = Decoded_message#message.text,
+    Sender ++ " sets mode " ++ Mode ++ " to " ++ Target.
 
 get_space_separated_tokens(String, Number_of_splits) ->
     re:split(String, "\\s", [{return, list}, {parts, Number_of_splits}]).
