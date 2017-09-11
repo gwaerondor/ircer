@@ -1,13 +1,20 @@
-#Ircer
+# Ircer
 An Erlang IRC client.
 
 ## How to use
-Compile with rebar.
 Start an Erlang shell and set the path to wherever you have the binaries, for example ```erl -pa /path/to/ircer/ebin/```.
+To get the binaries, build with rebar3, e.g. ```rebar3 compile```.
 
-Start by loading the ircer_app module and calling the start function. This will connect to a server.
+The best way to do all of this in one go is to start a shell directly with rebar3:
 
+```bash
+cd /path/to/ircer/
+rebar3 shell
 ```
+
+Start by loading the ircer_app module and calling the start/4 function. This will connect to a server.
+
+```erlang
 l(ircer_app).
 ircer_app:start("se.quakenet.org", 6667, "MyNickName" "Real Name").
 ```
