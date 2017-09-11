@@ -19,7 +19,14 @@ l(ircer_app).
 ircer_app:start("se.quakenet.org", 6667, "MyNickName" "Real Name").
 ```
 
-Human interface functions are in the ```i``` module, just to make them quicker to access. This means that OTP's i module will be unavailable. Call the exported function ```i:help/0``` to see the available commands.
+"Human interface" functions are in the ```i``` module, just to make them quicker to access. This means that OTP's i module will be unavailable. Call the exported function ```i:help/0``` to see the available commands.
+
+## Testing
+Run the unit tests with rebar3.
+```bash
+cd /path/to/ircer/
+rebar3 eunit
+```
 
 ## Limitations
 There is absolutely no UI implemented, so all functionalities are reached with pure Erlang function calls from the Erlang REPL.
