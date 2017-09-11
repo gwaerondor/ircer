@@ -387,3 +387,45 @@ encode_pong_message_test() ->
     Result = codec:encode_message(Outgoing_message),
     Expected = "PONG :1234567890",
     ?assertEqual(Expected, Result).
+
+get_text_after_with_object_present_test() ->
+    Text = "De-licious",
+    Result = codec:get_text_after($-, Text),
+    Expected = "licious",
+    ?assertEqual(Expected, Result).
+
+get_text_after_with_object_missing_test() ->
+    Text = "No dashes in here!",
+    Result = codec:get_text_after($-, Text),
+    Expected = "",
+    ?assertEqual(Expected, Result).
+
+get_text_after_with_object_last_test() ->
+    Text = "Hello!",
+    Result = codec:get_text_after($!, Text),
+    Expected = "",
+    ?assertEqual(Expected, Result).
+
+get_everything_after_last_separator_with_one_separator_test() ->
+    Text = "One\r\nTwo",
+    Result = codec:get_everything_after_last_separator(Text),
+    Expected = "Two",
+    ?assertEqual(Expected, Result).
+
+get_everything_after_last_separator_with_more_separators_test() ->
+    Text = "Jat\r\nJi\r\nSaam",
+    Result = codec:get_everything_after_last_separator(Text),
+    Expected = "Saam",
+    ?assertEqual(Expected, Result).
+
+get_everything_after_last_separator_with_separator_last_test() ->
+    Text = "Ichi\r\nNi\r\nSan\r\n",
+    Result = codec:get_everything_after_last_separator(Text),
+    Expected = "",
+    ?assertEqual(Expected, Result).
+
+get_everything_after_last_separator_when_there_is_no_separator_test() ->
+    Text = "1, 2, 3, 4",
+    Result = codec:get_everything_after_last_separator(Text),
+    Expected = Text,
+    ?assertEqual(Expected, Result).

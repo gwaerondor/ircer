@@ -1,0 +1,6 @@
+BB*.beam
+**/*~
+_build/*
+rebar.lock
+ircer.log
+**/#*#

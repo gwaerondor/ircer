@@ -12,6 +12,10 @@
 	 encode_message/1
 	]).
 
+-ifdef(TEST).
+-compile(export_all).
+-endif.
+
 -define(log(Msg), logger:write("codec", Msg)).
 
 parse_lines(Message) ->
