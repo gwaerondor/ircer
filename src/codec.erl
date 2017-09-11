@@ -228,28 +228,24 @@ text_before_exclamation_mark(Text) ->
 
 make_printable(Decoded_message) ->
     Type = Decoded_message#message.type,
-    case Type of
-	ping ->
-	    "Ping?";
-	join ->
-	    make_printable_join_message(Decoded_message);
-	mode ->
-	    make_printable_mode_message(Decoded_message);
-	kick ->
-	    make_printable_kick_message(Decoded_message);
-	privmsg ->
-	    make_printable_privmsg(Decoded_message);
-	quit ->
-	    make_printable_quit_message(Decoded_message);
-	part ->
-	    make_printable_part_message(Decoded_message);
-	nick ->
-	    make_printable_nick_message(Decoded_message);
-	unsupported ->
-	    make_printable_unsupported_message(Decoded_message);
-	_ ->
-	    make_printable_generic_message(Decoded_message)
-    end.
+    Action = get_action_for_making_message_printable(Type),
+    Action(Decoded_message).
+
+get_action_for_making_message_printable(Type) ->
+    Actions = #{ping => fun make_printable_ping_message/1,
+		join => fun make_printable_join_message/1,
+		mode => fun make_printable_mode_message/1,
+		kick => fun make_printable_kick_message/1,
+		privmsg => fun make_printable_privmsg/1,
+		quit => fun make_printable_quit_message/1,
+		part => fun make_printable_part_message/1,
+		nick => fun make_printable_nick_message/1,
+		unsupported => fun make_printable_unsupported_message/1},
+    Default = fun make_printable_generic_message/1,
+    maps:get(Type, Actions, Default).
+
+make_printable_ping_message(_) ->
+    "Ping?".
 
 make_printable_join_message(Decoded_message) ->
     Channel = Decoded_message#message.channel,
