@@ -66,14 +66,17 @@ part(Channel, Message) ->
     socket_handler ! {outgoing, Outgoing_enc}.
 
 quit(Message) ->
-    % How do I check if a node/process is active?
-    % I want to skip doing this if it is inactive!
-    Outgoing = #message{type = quit,
-			text = Message},
-    Outgoing_enc = codec:encode_message(Outgoing),
-    ?log("Quitting IRCer."),
-    socket_handler ! {outgoing, Outgoing_enc},
-    socket_handler ! quit.
+    case whereis(socket_handler) of
+	undefined -> 
+	    do_nothing;
+	_ ->
+	    Outgoing = #message{type = quit,
+				text = Message},
+	    Outgoing_enc = codec:encode_message(Outgoing),
+	    socket_handler ! {outgoing, Outgoing_enc},
+	    socket_handler ! quit
+    end,
+    ?log("Quitting IRCer.").
 
 quit() ->
     quit("I was using IRCer v. 874442773.01").
