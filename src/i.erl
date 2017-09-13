@@ -17,8 +17,8 @@
 
 help() ->
     io:format("Available commands:~n"
-	      "msg(Target, Message) - Send message to target."
-	      "Target can be a channel or a person.~n"
+	      "msg(Target, Message) - Send message to target "
+	      "(Target can be a channel or a person).~n"
 	      "join(Channel) - Joins a channel on the current network.~n"
 	      "quit() - Quits IRCER~n"
 	      "quit(Message) - Quits IRCER with the specified quit message.~n"
