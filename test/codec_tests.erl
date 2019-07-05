@@ -174,9 +174,9 @@ get_command_for_ping_test() ->
     ?assertEqual(Expected, Result).
 
 get_params_for_ping_test() ->
-    Incoming_data = "PING :irc.ericsson.com",
+    Incoming_data = "PING :irc.thanalan.com",
     Result = codec:get_parameters(Incoming_data),
-    Expected = "irc.ericsson.com",
+    Expected = "irc.thanalan.com",
     ?assertEqual(Expected, Result).
 
 encode_ident_message_test() ->
